@@ -14,18 +14,74 @@ pip install requests
 
 
 
-## get或post请求
+## 发送请求与传递参数
+
+使用 Requests 发送网络请求非常简单。
+
+一开始要导入 Requests 模块：
 
 ```python
-# 不带可选参数的get请求
->>> r = requests.get(url='https://github.com/timeline.json')
-# 不带可选参数的post请求
->>> r = requests.post(url="http://httpbin.org/post")
+>>> import requests
 ```
 
-## get\post参数说明
+然后，尝试获取某个网页。本例子中，我们来获取 Github 的公共时间线：
 
-http 请求 `get` 与 `post` 是最常用的，`url` 为必选参数，常用常用参数有params、data、json、files、timeout、headers、cookies；*其他基本用不到的有verify，cert，auth，allow_redirects，proxies，hooks，stream*。
+```python
+>>> r = requests.get('https://api.github.com/events')
+```
+
+现在，我们有一个名为 `r` 的 [`Response`](https://requests.readthedocs.io/zh_CN/latest/api.html#requests.Response) 对象。我们可以从这个对象中获取所有我们想要的信息。
+
+Requests 简便的 API 意味着所有 HTTP 请求类型都是显而易见的。例如，你可以这样发送一个 HTTP POST 请求：
+
+```python
+>>> r = requests.post('http://httpbin.org/post', data = {'key':'value'})
+```
+
+漂亮，对吧？那么其他 HTTP 请求类型：PUT，DELETE，HEAD 以及 OPTIONS 又是如何的呢？都是一样的简单：
+
+```python
+>>> r = requests.put('http://httpbin.org/put', data = {'key':'value'})
+>>> r = requests.delete('http://httpbin.org/delete')
+>>> r = requests.head('http://httpbin.org/get')
+>>> r = requests.options('http://httpbin.org/get')
+```
+
+都很不错吧，但这也仅是 Requests 的冰山一角呢。
+
+## 传递 URL 参数
+
+你也许经常想为 URL 的查询字符串(query string)传递某种数据。如果你是手工构建 URL，那么数据会以键/值对的形式置于 URL 中，跟在一个问号的后面。例如， `httpbin.org/get?key=val`。 Requests 允许你使用 `params` 关键字参数，以一个字符串字典来提供这些参数。举例来说，如果你想传递 `key1=value1` 和 `key2=value2` 到 `httpbin.org/get` ，那么你可以使用如下代码：
+
+```python
+>>> payload = {'key1': 'value1', 'key2': 'value2'}
+>>> r = requests.get("http://httpbin.org/get", params=payload)
+```
+
+通过打印输出该 URL，你能看到 URL 已被正确编码：
+
+```python
+>>> print(r.url)
+http://httpbin.org/get?key2=value2&key1=value1
+```
+
+注意字典里值为 `None` 的键都不会被添加到 URL 的查询字符串里。
+
+你还可以将一个列表作为值传入：
+
+```
+>>> payload = {'key1': 'value1', 'key2': ['value2', 'value3']}
+
+>>> r = requests.get('http://httpbin.org/get', params=payload)
+>>> print(r.url)
+http://httpbin.org/get?key1=value1&key2=value2&key2=value3
+```
+
+
+
+## 参数说明
+
+http 请求 `get` 与 `post` 是最常用的，`url` 为必选参数，常用常用参数有params、data、json、files、timeout、headers、cookies；其他基本用不到的有verify，cert，auth，allow_redirects，proxies，hooks，stream。
 
 下面列表对具体的参数说明：
 
@@ -35,9 +91,35 @@ http 请求 `get` 与 `post` 是最常用的，`url` 为必选参数，常用常
 
 
 
-## get请求文本与二进制数据内容(图片)
+## Response对象
 
 get请求是最简单的、发送的数据量比较小。
+
+使用 requests方法后，会返回一个response对象，其存储了服务器响应的内容，如上实例中已经提到的 r.text、r.status_code……
+获取文本方式的响应体实例：当你访问 r.text 之时，会使用其响应的文本编码进行解码，并且你可以修改其编码让 r.text 使用自定义的编码进行解码。
+
+```
+r = requests.get('http://www.itwhy.org')
+print(r.text, '\n{}\n'.format('*'*79), r.encoding)
+r.encoding = 'GBK'
+print(r.text, '\n{}\n'.format('*'*79), r.encoding)
+```
+
+其他响应：
+
+```
+r.status_code # 响应状态码
+ r.encoding  # 获取网页编码
+r.raw #返回原始响应体，也就是 urllib 的 response 对象，使用 r.raw.read() 读取
+r.content #字节方式的响应体，会自动为你解码 gzip 和 deflate 压缩
+r.text #字符串方式的响应体，会自动根据响应头部的字符编码进行解码
+r.headers #以字典对象存储服务器响应头，但是这个字典比较特殊，字典键不区分大小写，若键不存在则返回None
+#*特殊方法*#
+r.json() #Requests中内置的JSON解码器
+r.raise_for_status() #失败请求(非200响应)抛出异常
+```
+
+
 
 - 示例2.1: 带多个参数的请求，返回文本数据
 
@@ -79,6 +161,8 @@ with open('img.jpg', 'wb') as fd:
 ## post请求，上传表单，文本，文件\图片
 
 post 请求比 get 复杂，请求的数据有多种多样，有表单(form-data)，文本(json\xml等)，文件流（图片\文件）等。
+
+要发送POST请求，只需要把`get()`方法变成`post()`，然后传入`data`参数作为POST请求的数据：
 
 表单形式提交的post请求，只需要将数据传递给post()方法的data参数。见示例3.1.
 
@@ -144,7 +228,7 @@ r = requests.post(url, files=multiple_files)
 print(r.text)
 ```
 
-## get与post请求的header与cookie管理
+## 定制请求头
 
 获取 `get` 与 `post` 请求响应的 `header` 与 `cookie` 分别使用 `r.headers` 与`r.cookies` 。如果提交请求数据是对 header 与 cookie 有修改，需要在get()与post()方法中加入 headers 或 cookies 参数，它们值的**类型都是字典**
 
@@ -178,6 +262,8 @@ print(r.text)
 
 
 ## session与cookie存储
+
+ 会话对象requests.Session能够跨请求地保持某些参数，比如cookies，即在同一个Session实例发出的所有请求都保持同一个cookies,而requests模块每次会自动处理cookies，这样就很方便地处理登录时的cookies问题。
 
 如果你向同一主机发送多个请求，每个请求对象让你能够跨请求保持session和cookie信息，这时我们要使用到requests的Session()来保持回话请求的cookie和session与服务器的相一致。
 
